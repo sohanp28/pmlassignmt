@@ -1,0 +1,147 @@
+---
+title: "Assignment pml predict"
+author: "P Sohan"
+date: "10/20/2020"
+output: html_document
+---
+
+
+## Brief Backgd
+
+We are Performing this project to predict the way with which participants perform a barbell lift. Now a days we have the technology like Fitbit, Nike fuelband to collect data about a persons activities.
+The data used here is from: http://groupware.les.inf.puc-rio.br/har
+
+## Intials
+
+We use various training and test sets from the sources online.
+
+```{r DLding, message = FALSE}
+library(caret)
+#usingcaret
+setwd("C:/Users/MAHE/Documents")
+#setingpath
+#gtnurls
+exeURL <- "http://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+#gtnurlss
+exetURL <- "http://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+#trngtransfer
+trining <- read.csv(url(exeURL))
+#tstng_trnfr
+tstingg <- read.csv(url(exetURL))
+label<- createDataPartition(trining$classe, p = 0.7, list = FALSE)
+trinbb <- trining[label, ]
+tstbbb <- trining[-label, ]
+```
+
+
+There are a lot of variables in the data set so we try to reduce them with the help of the below given chunk.
+Alot of these variables are not needed so we just get rid of them.
+The main goal of this stage is to reduce the data set by gettinig rid of some unwanted datas.
+
+
+```{r DClng}
+NnZro <- nearZeroVar(trinbb)
+#varzero
+trinbb <- trinbb[ ,-NnZro]
+#trnngset
+tstbbb <- tstbbb[ ,-NnZro]
+#label_usntr
+label<- apply(trinbb, 2, function(x) mean(is.na(x))) > 0.95
+#bhbhb
+trinbb <- trinbb[, -which(label, label== FALSE)]
+tstbbb <- tstbbb[, -which(label, label == FALSE)]
+trinbb <- trinbb[ , -(1:5)]
+tstbbb <- tstbbb[ , -(1:5)]
+```
+
+
+
+## plotinggph
+
+We have removed uncessary variabls. Now we will see how the vsr depend on each other. For that matter we create plot and observe.We use the corrplot library. We then create a relationship plot among the variables.
+
+
+```{r CrelPlot, fig.width=12, fig.height=8}
+library(corrplot)
+#lib_remember
+corrMat <- cor(trinbb[,-54])
+#placing_it
+corrplot(corrMat, method = "color", type = "upper", tl.cex = 0.8, tl.col = rgb(0,0,0))
+```
+Dark regions have high relnsp tg[ns]
+
+
+## first modell Dcsntree
+
+Now after the initiol steps we use three methodss for modelling th sets we have. We would try to find out which one among these methods would yeild us the most accurate results . We will be having plots at the end of every model in order to find out which of the plot is the best representation ptim.
+
+
+### Dsdnt
+
+```{r DnTree, message = FALSE, warning = FALSE, fig.width=18, fig.height=10}
+library(rpart)
+library(rpart.plot)
+library(rattle)
+#libs
+set.seed(13908)
+#sdng
+modelldD <- rpart(classe ~ ., data = trinbb, method = "class")
+#modelled
+fancyRpartPlot(modelldD)
+#usgn_fn
+predicttdD <- predict(modelldD, tstbbb, type = "class")
+#prdtng
+confMattrrrD <- confusionMatrix(predicttdD, tstbbb$classe)
+confMattrrrD
+```
+
+### secong modell of randFrt
+
+
+
+```{r RrFost, message = FALSE}
+#we are going to try using randomforest
+library(caret)
+#libs
+set.seed(13908)
+#putng_ctrl
+control <- trainControl(method = "cv", number = 3, verboseIter=FALSE)
+#putng_modelled
+modellrrR <- train(classe ~ ., data = trinbb, method = "rf", trControl = control)
+modellrrR$finalModel
+#prdictd_val
+predictteddR <- predict(modellrrR, tstbbb)
+confMatrRrrf <- confusionMatrix(predictteddR, tstbbb$classe)
+confMatrRrrf
+```
+
+### third modell of gbm
+
+
+
+```{r GBMplottng, message = FALSE}
+#trying gbm method
+library(caret)
+#libcaret
+set.seed(13908)
+#cntrl_put
+control <- trainControl(method = "repeatedcv", number = 5, repeats = 1, verboseIter = FALSE)
+#modelled
+modelGBbbm <- train(classe ~ ., data = trinbb, trControl = control, method = "gbm", verbose = FALSE)
+modelGBbbm$finalModel
+#prditd_usgn
+predictGBbbm <- predict(modelGBbbm, tstbbb)
+confMatrGBbbm <- confusionMatrix(predictGBbbm, tstbbb$classe)
+confMatrGBbbm
+```
+
+the most accurate result is obtained from Random forest method. So we will use this method to get results for the tests.
+
+## Getting Results
+
+```{r resultprd, messages = FALSE}
+#finding out prediction for the set
+predictteddR <- predict(modellrrR, tstingg)
+predictteddR
+```
+
